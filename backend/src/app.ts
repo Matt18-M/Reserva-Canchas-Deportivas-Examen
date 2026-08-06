@@ -3,6 +3,8 @@ import cors from 'cors';
 
 import { errorMiddleware } from './middlewares/error.middleware';
 import authRoutes from './modules/auth/auth.routes';
+import courtTypesRoutes from './modules/court-types/court-types.routes';
+import courtsRoutes from './modules/courts/courts.routes';
 import usersRoutes from './modules/users/users.routes';
 
 const app = express();
@@ -17,6 +19,8 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/court-types', courtTypesRoutes);
+app.use('/api/courts', courtsRoutes);
 
 app.use(errorMiddleware);
 
