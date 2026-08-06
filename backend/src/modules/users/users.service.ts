@@ -26,7 +26,19 @@ export type CreateUserData = Pick<
 > &
   Partial<Pick<Prisma.UsuarioUncheckedCreateInput, 'telefono' | 'fotoPerfil' | 'activo'>>;
 
+export type UpdateUserData = Pick<
+  Prisma.UsuarioUpdateInput,
+  'nombre' | 'apellido' | 'telefono' | 'fotoPerfil'
+>;
+
 export class UsersService {
+  async findAll(): Promise<UserWithRole[]> {
+    return prisma.usuario.findMany({
+      select: userWithRoleSelect,
+      orderBy: { id: 'asc' },
+    });
+  }
+
   async findByEmail(email: string): Promise<UserWithRole | null> {
     return prisma.usuario.findUnique({
       where: { email },
@@ -44,6 +56,22 @@ export class UsersService {
   async create(data: CreateUserData): Promise<UserWithRole> {
     return prisma.usuario.create({
       data,
+      select: userWithRoleSelect,
+    });
+  }
+
+  async update(id: number, data: UpdateUserData): Promise<UserWithRole> {
+    return prisma.usuario.update({
+      where: { id },
+      data,
+      select: userWithRoleSelect,
+    });
+  }
+
+  async updateStatus(id: number, activo: boolean): Promise<UserWithRole> {
+    return prisma.usuario.update({
+      where: { id },
+      data: { activo },
       select: userWithRoleSelect,
     });
   }
