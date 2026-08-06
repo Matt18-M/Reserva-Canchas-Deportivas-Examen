@@ -1,3 +1,5 @@
+import './config';
+
 import express from 'express';
 import cors from 'cors';
 
@@ -8,6 +10,10 @@ import courtsRoutes from './modules/courts/courts.routes';
 import schedulesRoutes, {
   courtSchedulesRouter,
 } from './modules/schedules/schedules.routes';
+import paymentsRoutes from './modules/payments/payments.routes';
+import reservationsRoutes, {
+  courtAvailabilityRouter,
+} from './modules/reservations/reservations.routes';
 import usersRoutes from './modules/users/users.routes';
 
 const app = express();
@@ -24,8 +30,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/court-types', courtTypesRoutes);
 app.use('/api/courts', courtSchedulesRouter);
+app.use('/api/courts', courtAvailabilityRouter);
 app.use('/api/courts', courtsRoutes);
 app.use('/api/schedules', schedulesRoutes);
+app.use('/api/reservations', reservationsRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 app.use(errorMiddleware);
 

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 
 import config from '../config';
 import { JwtPayload } from '../modules/auth/auth.service';
+import { ApiError } from '../utils/ApiError';
 
 declare global {
   namespace Express {
@@ -21,11 +22,7 @@ export const authenticate = (
     const authHeader = req.headers.authorization;
 
     if (!authHeader?.startsWith('Bearer ')) {
-      throw new Error('Token no proporcionado.');
-    }
-
-    if (!config.jwtSecret) {
-      throw new Error('JWT_SECRET no está configurado.');
+      throw new ApiError(401, 'Token no proporcionado.');
     }
 
     const token = authHeader.slice(7);
@@ -38,12 +35,17 @@ export const authenticate = (
       !('email' in decoded) ||
       !('rol' in decoded)
     ) {
-      throw new Error('Token inválido.');
+      throw new ApiError(401, 'Token inválido.');
     }
 
     req.user = decoded as JwtPayload;
     next();
   } catch (error) {
-    next(error instanceof Error ? error : new Error('Token inválido.'));
+    if (error instanceof ApiError) {
+      next(error);
+      return;
+    }
+
+    next(new ApiError(401, 'Token inválido.'));
   }
 };

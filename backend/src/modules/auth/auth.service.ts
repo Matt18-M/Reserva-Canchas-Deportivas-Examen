@@ -69,6 +69,10 @@ export class AuthService {
       throw new Error('Credenciales inválidas.');
     }
 
+    if (!user.activo) {
+      throw new Error('El usuario se encuentra deshabilitado.');
+    }
+
     const credentials = await prisma.usuario.findUnique({
       where: { email: data.email },
       select: { password: true },
@@ -87,10 +91,6 @@ export class AuthService {
   }
 
   private generateToken(user: UserWithRole): string {
-    if (!config.jwtSecret) {
-      throw new Error('JWT_SECRET no está configurado.');
-    }
-
     const payload: JwtPayload = {
       id: user.id,
       email: user.email,
