@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EstadoReserva {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PAGADO
+  FALLIDO
+  REEMBOLSADO
+}
+
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TRANSFERENCIA
+  TARJETA
+  PAYPHONE
+}
+
+model Rol {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique @db.VarChar(50)
+  descripcion String?   @db.VarChar(255)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  users Usuario[]
+
+  @@map("roles")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @db.VarChar(100)
+  apellido  String   @db.VarChar(100)
+  email      String  @unique @db.VarChar(150)
+  password   String  @db.VarChar(255)
+  telefono   String? @db.VarChar(20)
+  fotoPerfil String? @map("foto_perfil") @db.VarChar(255)
+  activo     Boolean @default(true)
+  rolId     Int      @map("rol_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  role         Rol       @relation(fields: [rolId], references: [id], onDelete: Restrict)
+  reservations Reserva[]
+
+  @@index([rolId])
+  @@map("usuarios")
+}
+
+model TipoCancha {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique @db.VarChar(100)
+  descripcion String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  courts Cancha[]
+
+  @@map("tipos_cancha")
+}
+
+model Cancha {
+  id            Int      @id @default(autoincrement())
+  codigo        String   @unique @db.VarChar(20)
+  nombre        String   @db.VarChar(100)
+  descripcion   String?  @db.VarChar(255)
+  precioHora    Decimal  @map("precio_hora") @db.Decimal(10, 2)
+  capacidad     Int?
+  ubicacion     String?  @db.VarChar(255)
+  imagen        String?  @db.VarChar(255)
+  activa        Boolean  @default(true)
+  tipoCanchaId  Int      @map("tipo_cancha_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  courtType    TipoCancha @relation(fields: [tipoCanchaId], references: [id], onDelete: Restrict)
+  schedules    Horario[]
+  reservations Reserva[]
+
+  @@index([tipoCanchaId])
+  @@map("canchas")
+}
+
+model Horario {
+  id         Int      @id @default(autoincrement())
+  diaSemana  DiaSemana @map("dia_semana")
+  /// Representa únicamente la hora del día, no una fecha completa.
+  horaInicio DateTime @map("hora_inicio") @db.Time(0)
+  /// Representa únicamente la hora del día, no una fecha completa.
+  horaFin    DateTime @map("hora_fin") @db.Time(0)
+  activo     Boolean  @default(true)
+  canchaId   Int      @map("cancha_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  court Cancha @relation(fields: [canchaId], references: [id], onDelete: Cascade)
+
+  @@unique([canchaId, diaSemana, horaInicio, horaFin])
+  @@index([canchaId])
+  @@map("horarios")
+}
+
+model Reserva {
+  id              Int           @id @default(autoincrement())
+  codigo          String        @unique @db.VarChar(30)
+  fechaInicio     DateTime      @map("fecha_inicio")
+  fechaFin        DateTime      @map("fecha_fin")
+  duracionHoras   Int           @map("duracion_horas")
+  estado          EstadoReserva @default(PENDIENTE)
+  notas           String?       @db.VarChar(500)
+  montoTotal      Decimal       @map("monto_total") @db.Decimal(10, 2)
+  usuarioId       Int           @map("usuario_id")
+  canchaId        Int           @map("cancha_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user    Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  court   Cancha  @relation(fields: [canchaId], references: [id], onDelete: Restrict)
+  payment Pago?
+
+  @@unique([canchaId, fechaInicio, fechaFin])
+  @@index([usuarioId])
+  @@index([canchaId])
+  @@index([fechaInicio, fechaFin])
+  @@index([estado])
+  @@map("reservas")
+}
+
+model Pago {
+  id              Int        @id @default(autoincrement())
+  monto           Decimal    @db.Decimal(10, 2)
+  estado          EstadoPago @default(PENDIENTE)
+  metodoPago      MetodoPago? @map("metodo_pago")
+  referencia      String?    @db.VarChar(100)
+  fechaPago       DateTime?  @map("fecha_pago")
+  reservaId       Int        @unique @map("reserva_id")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  reservation Reserva @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+
+  @@index([estado])
+  @@map("pagos")
+}
