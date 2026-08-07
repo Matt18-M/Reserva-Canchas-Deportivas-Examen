@@ -24,10 +24,11 @@ export const validate = (schema: ZodType) => {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
+      const errors = formatZodErrors(result.error);
       const response: ValidationErrorResponse = {
         success: false,
-        message: 'Error de validación.',
-        errors: formatZodErrors(result.error),
+        message: errors[0]?.message ?? 'Error de validación.',
+        errors,
       };
 
       res.status(400).json(response);

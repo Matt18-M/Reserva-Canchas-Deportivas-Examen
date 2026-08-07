@@ -1,6 +1,7 @@
 import { DiaSemana, Prisma } from '@prisma/client';
 
 import prisma from '../../database/prisma';
+import { formatTimeString, parseTimeString } from '../../utils/time.utils';
 import {
   type CreateScheduleInput,
   type UpdateScheduleInput,
@@ -17,9 +18,20 @@ const scheduleSelect = {
   updatedAt: true,
 } satisfies Prisma.HorarioSelect;
 
-export type Schedule = Prisma.HorarioGetPayload<{
+type ScheduleRecord = Prisma.HorarioGetPayload<{
   select: typeof scheduleSelect;
 }>;
+
+export type Schedule = Omit<ScheduleRecord, 'horaInicio' | 'horaFin'> & {
+  horaInicio: string;
+  horaFin: string;
+};
+
+const serializeSchedule = (schedule: ScheduleRecord): Schedule => ({
+  ...schedule,
+  horaInicio: formatTimeString(schedule.horaInicio),
+  horaFin: formatTimeString(schedule.horaFin),
+});
 
 const handlePrismaError = (error: unknown): Error => {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -39,18 +51,6 @@ const handlePrismaError = (error: unknown): Error => {
   return new Error('Error al procesar la solicitud del horario.');
 };
 
-const parseTime = (time: string): Date => {
-  const [hours, minutes, seconds = '0'] = time.split(':');
-  return new Date(
-    1970,
-    0,
-    1,
-    Number(hours),
-    Number(minutes),
-    Number(seconds),
-  );
-};
-
 const assertActiveCourtExists = async (canchaId: number): Promise<void> => {
   const court = await prisma.cancha.findUnique({
     where: { id: canchaId },
@@ -68,19 +68,26 @@ const assertNoOverlap = async (
   horaFin: Date,
   excludeId?: number,
 ): Promise<void> => {
-  const overlapping = await prisma.horario.findFirst({
-    where: {
-      canchaId,
-      diaSemana,
-      activo: true,
-      id: excludeId !== undefined ? { not: excludeId } : undefined,
-      horaInicio: { lt: horaFin },
-      horaFin: { gt: horaInicio },
-    },
-  });
+  if (!Number.isInteger(canchaId) || canchaId <= 0) {
+    throw new Error('canchaId inválido.');
+  }
+
+  const where: Prisma.HorarioWhereInput = {
+    canchaId,
+    diaSemana,
+    activo: true,
+    horaInicio: { lt: horaFin },
+    horaFin: { gt: horaInicio },
+  };
+
+  if (excludeId !== undefined) {
+    where.id = { not: excludeId };
+  }
+
+  const overlapping = await prisma.horario.findFirst({ where });
 
   if (overlapping) {
-    throw new Error('El horario se solapa con otro horario activo.');
+    throw new Error('El horario se solapa con otro horario activo de la misma cancha.');
   }
 };
 
@@ -95,7 +102,7 @@ export class SchedulesService {
         throw new Error('Cancha no encontrada o inactiva.');
       }
 
-      return await prisma.horario.findMany({
+      const schedules = await prisma.horario.findMany({
         where: {
           canchaId,
           activo: true,
@@ -103,6 +110,8 @@ export class SchedulesService {
         select: scheduleSelect,
         orderBy: [{ diaSemana: 'asc' }, { horaInicio: 'asc' }],
       });
+
+      return schedules.map(serializeSchedule);
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -114,10 +123,12 @@ export class SchedulesService {
 
   async findById(id: number): Promise<Schedule | null> {
     try {
-      return await prisma.horario.findUnique({
+      const schedule = await prisma.horario.findUnique({
         where: { id },
         select: scheduleSelect,
       });
+
+      return schedule ? serializeSchedule(schedule) : null;
     } catch (error) {
       throw handlePrismaError(error);
     }
@@ -127,8 +138,8 @@ export class SchedulesService {
     try {
       await assertActiveCourtExists(data.canchaId);
 
-      const horaInicio = parseTime(data.horaInicio);
-      const horaFin = parseTime(data.horaFin);
+      const horaInicio = parseTimeString(data.horaInicio);
+      const horaFin = parseTimeString(data.horaFin);
       const activo = data.activo ?? true;
 
       if (activo) {
@@ -140,7 +151,7 @@ export class SchedulesService {
         );
       }
 
-      return await prisma.horario.create({
+      const schedule = await prisma.horario.create({
         data: {
           canchaId: data.canchaId,
           diaSemana: data.diaSemana,
@@ -150,6 +161,8 @@ export class SchedulesService {
         },
         select: scheduleSelect,
       });
+
+      return serializeSchedule(schedule);
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -175,10 +188,10 @@ export class SchedulesService {
       const diaSemana = data.diaSemana ?? existing.diaSemana;
       const horaInicio =
         data.horaInicio !== undefined
-          ? parseTime(data.horaInicio)
+          ? parseTimeString(data.horaInicio)
           : existing.horaInicio;
       const horaFin =
-        data.horaFin !== undefined ? parseTime(data.horaFin) : existing.horaFin;
+        data.horaFin !== undefined ? parseTimeString(data.horaFin) : existing.horaFin;
       const activo = data.activo ?? existing.activo;
 
       if (horaInicio >= horaFin) {
@@ -195,7 +208,7 @@ export class SchedulesService {
         );
       }
 
-      return await prisma.horario.update({
+      const schedule = await prisma.horario.update({
         where: { id },
         data: {
           canchaId: data.canchaId,
@@ -206,6 +219,8 @@ export class SchedulesService {
         },
         select: scheduleSelect,
       });
+
+      return serializeSchedule(schedule);
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -237,11 +252,13 @@ export class SchedulesService {
         );
       }
 
-      return await prisma.horario.update({
+      const schedule = await prisma.horario.update({
         where: { id },
         data: { activo },
         select: scheduleSelect,
       });
+
+      return serializeSchedule(schedule);
     } catch (error) {
       if (error instanceof Error) {
         throw error;

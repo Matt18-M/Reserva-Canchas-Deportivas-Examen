@@ -1,4 +1,6 @@
-import { EstadoReserva, Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+
+import { EstadoPago, EstadoReserva, Prisma } from '@prisma/client';
 
 import prisma from '../../database/prisma';
 import { type CreateReservationInput, type SearchReservationQuery } from './reservations.validation';
@@ -9,10 +11,10 @@ import {
   combineDateWithScheduleTime,
   dateToDiaSemana,
   endOfDay,
+  formatCalendarDate,
   isSameCalendarDay,
   mergeIntervals,
-  minutesOfDay,
-  scheduleTimeToMinutes,
+  parseCalendarDate,
   startOfDay,
   subtractIntervals,
   type TimeInterval,
@@ -61,6 +63,25 @@ const reservationSelect = {
   },
 } satisfies Prisma.ReservaSelect;
 
+const paymentSummarySelect = {
+  id: true,
+  monto: true,
+  estado: true,
+  metodoPago: true,
+  referencia: true,
+  fechaPago: true,
+  reservaId: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.PagoSelect;
+
+const reservationDetailSelect = {
+  ...reservationSelect,
+  payment: {
+    select: paymentSummarySelect,
+  },
+} satisfies Prisma.ReservaSelect;
+
 const scheduleSummarySelect = {
   id: true,
   diaSemana: true,
@@ -84,6 +105,15 @@ export type Reservation = Prisma.ReservaGetPayload<{
   select: typeof reservationSelect;
 }>;
 
+export type ReservationPaymentSummary = Prisma.PagoGetPayload<{
+  select: typeof paymentSummarySelect;
+}>;
+
+export type ReservationDetail = Reservation & {
+  payment: ReservationPaymentSummary | null;
+  hasPayment: boolean;
+};
+
 type PrismaClientLike = Prisma.TransactionClient | typeof prisma;
 
 export type FreeSlot = {
@@ -102,9 +132,41 @@ export type CourtAvailability = {
   slotsLibres: FreeSlot[];
 };
 
+const getUniqueConstraintFields = (target: unknown): string[] => {
+  if (Array.isArray(target)) {
+    return target.map(String);
+  }
+
+  if (typeof target === 'string') {
+    if (target.includes('codigo')) {
+      return ['codigo'];
+    }
+
+    if (target.includes('cancha_id') && target.includes('fecha')) {
+      return ['canchaId', 'fechaInicio', 'fechaFin'];
+    }
+  }
+
+  return [];
+};
+
 const handlePrismaError = (error: unknown): Error => {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
+      const fields = getUniqueConstraintFields(error.meta?.target);
+
+      if (fields.includes('codigo')) {
+        return new Error('No se pudo generar un código único para la reserva.');
+      }
+
+      if (
+        fields.includes('canchaId') &&
+        fields.includes('fechaInicio') &&
+        fields.includes('fechaFin')
+      ) {
+        return new Error('La cancha ya tiene una reserva en ese horario.');
+      }
+
       return new Error('Ya existe una reserva con los mismos datos.');
     }
 
@@ -120,9 +182,21 @@ const handlePrismaError = (error: unknown): Error => {
   return new Error('Error al procesar la solicitud de la reserva.');
 };
 
+const resolveServiceError = (error: unknown): Error => {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return handlePrismaError(error);
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return handlePrismaError(error);
+};
+
 const generateReservationCode = (): string => {
-  const suffix = Date.now().toString(36).toUpperCase();
-  return `RES-${suffix}`.slice(0, 30);
+  const suffix = randomUUID().replace(/-/g, '').slice(0, 22).toUpperCase();
+  return `RES-${suffix}`;
 };
 
 const calculateDurationHours = (fechaInicio: Date, fechaFin: Date): number => {
@@ -167,8 +241,6 @@ const assertScheduleContains = async (
   }
 
   const diaSemana = dateToDiaSemana(fechaInicio);
-  const reservationStartMinutes = minutesOfDay(fechaInicio);
-  const reservationEndMinutes = minutesOfDay(fechaFin);
 
   const schedules = await client.horario.findMany({
     where: {
@@ -183,13 +255,18 @@ const assertScheduleContains = async (
   });
 
   const isContained = schedules.some((schedule) => {
-    const scheduleStartMinutes = scheduleTimeToMinutes(schedule.horaInicio);
-    const scheduleEndMinutes = scheduleTimeToMinutes(schedule.horaFin);
-
-    return (
-      scheduleStartMinutes <= reservationStartMinutes &&
-      scheduleEndMinutes >= reservationEndMinutes
+    const scheduleStart = combineDateWithScheduleTime(
+      fechaInicio,
+      schedule.horaInicio,
     );
+    let scheduleEnd = combineDateWithScheduleTime(fechaInicio, schedule.horaFin);
+
+    if (scheduleEnd <= scheduleStart) {
+      scheduleEnd = new Date(scheduleEnd);
+      scheduleEnd.setDate(scheduleEnd.getDate() + 1);
+    }
+
+    return fechaInicio >= scheduleStart && fechaFin <= scheduleEnd;
   });
 
   if (!isContained) {
@@ -252,6 +329,72 @@ const computeFreeSlots = (
   );
 };
 
+const activeReservationsWhere: Prisma.ReservaWhereInput = {
+  estado: { not: EstadoReserva.COMPLETADA },
+};
+
+const assertApprovedPayment = async (
+  reservaId: number,
+  client: PrismaClientLike = prisma,
+): Promise<void> => {
+  const payment = await client.pago.findUnique({
+    where: { reservaId },
+    select: { estado: true },
+  });
+
+  if (!payment || payment.estado !== EstadoPago.PAGADO) {
+    throw new Error('No se puede confirmar una reserva sin un pago aprobado.');
+  }
+};
+
+const assertValidStatusTransition = async (
+  current: EstadoReserva,
+  next: EstadoReserva,
+  reservaId: number,
+  client: PrismaClientLike = prisma,
+): Promise<void> => {
+  if (current === next) {
+    throw new Error('La reserva ya se encuentra en ese estado.');
+  }
+
+  if (current === EstadoReserva.CANCELADA || current === EstadoReserva.COMPLETADA) {
+    throw new Error('No se puede modificar una reserva cancelada o completada.');
+  }
+
+  switch (next) {
+    case EstadoReserva.CONFIRMADA:
+      if (current !== EstadoReserva.PENDIENTE) {
+        throw new Error('Solo se puede confirmar una reserva pendiente.');
+      }
+      await assertApprovedPayment(reservaId, client);
+      break;
+
+    case EstadoReserva.COMPLETADA:
+      if (current !== EstadoReserva.CONFIRMADA) {
+        throw new Error('Solo se puede completar una reserva confirmada.');
+      }
+      await assertApprovedPayment(reservaId, client);
+      break;
+
+    case EstadoReserva.CANCELADA:
+      if (
+        current !== EstadoReserva.PENDIENTE &&
+        current !== EstadoReserva.CONFIRMADA
+      ) {
+        throw new Error(
+          'Solo se pueden cancelar reservas pendientes o confirmadas.',
+        );
+      }
+      break;
+
+    case EstadoReserva.PENDIENTE:
+      throw new Error('No se puede revertir una reserva a pendiente.');
+
+    default:
+      throw new Error('Transición de estado inválida.');
+  }
+};
+
 export class ReservationsService {
   async findByUser(userId: number): Promise<Reservation[]> {
     try {
@@ -268,6 +411,7 @@ export class ReservationsService {
   async findAll(): Promise<Reservation[]> {
     try {
       return await prisma.reserva.findMany({
+        where: activeReservationsWhere,
         select: reservationSelect,
         orderBy: { fechaInicio: 'desc' },
       });
@@ -276,12 +420,33 @@ export class ReservationsService {
     }
   }
 
-  async findById(id: number): Promise<Reservation | null> {
+  async findHistory(): Promise<Reservation[]> {
     try {
-      return await prisma.reserva.findUnique({
-        where: { id },
+      return await prisma.reserva.findMany({
+        where: { estado: EstadoReserva.COMPLETADA },
         select: reservationSelect,
+        orderBy: { fechaInicio: 'desc' },
       });
+    } catch (error) {
+      throw handlePrismaError(error);
+    }
+  }
+
+  async findById(id: number): Promise<ReservationDetail | null> {
+    try {
+      const reservation = await prisma.reserva.findUnique({
+        where: { id },
+        select: reservationDetailSelect,
+      });
+
+      if (!reservation) {
+        return null;
+      }
+
+      return {
+        ...reservation,
+        hasPayment: reservation.payment !== null,
+      };
     } catch (error) {
       throw handlePrismaError(error);
     }
@@ -303,7 +468,7 @@ export class ReservationsService {
         throw new Error('fechaInicio debe ser menor que fechaFin.');
       }
 
-      if (fechaInicio <= new Date()) {
+      if (fechaInicio.getTime() < Date.now()) {
         throw new Error('fechaInicio debe ser una fecha futura.');
       }
 
@@ -324,7 +489,7 @@ export class ReservationsService {
           tx,
         );
 
-        return tx.reserva.create({
+        const reservation = await tx.reserva.create({
           data: {
             codigo: generateReservationCode(),
             fechaInicio,
@@ -338,13 +503,21 @@ export class ReservationsService {
           },
           select: reservationSelect,
         });
+
+        await tx.pago.create({
+          data: {
+            reservaId: reservation.id,
+            monto: montoTotal,
+            estado: EstadoPago.PENDIENTE,
+            metodoPago: data.metodoPago,
+            referencia: data.referencia,
+          },
+        });
+
+        return reservation;
       });
     } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-
-      throw handlePrismaError(error);
+      throw resolveServiceError(error);
     }
   }
 
@@ -374,7 +547,9 @@ export class ReservationsService {
 
   async search(filters: SearchReservationQuery): Promise<Reservation[]> {
     try {
-      const where: Prisma.ReservaWhereInput = {};
+      const where: Prisma.ReservaWhereInput = {
+        ...activeReservationsWhere,
+      };
 
       if (filters.estado !== undefined) {
         where.estado = filters.estado;
@@ -456,7 +631,7 @@ export class ReservationsService {
         throw new Error('Cancha no encontrada o inactiva.');
       }
 
-      const targetDate = startOfDay(date);
+      const targetDate = parseCalendarDate(date);
       const diaSemana = dateToDiaSemana(targetDate);
       const dayStart = startOfDay(targetDate);
       const dayEnd = endOfDay(targetDate);
@@ -493,7 +668,7 @@ export class ReservationsService {
       );
 
       return {
-        date: targetDate.toISOString().slice(0, 10),
+        date: formatCalendarDate(targetDate),
         diaSemana,
         courtId,
         horarios,
@@ -518,6 +693,8 @@ export class ReservationsService {
       if (!existing) {
         throw new Error('Reserva no encontrada.');
       }
+
+      await assertValidStatusTransition(existing.estado, estado, id);
 
       return await prisma.reserva.update({
         where: { id },

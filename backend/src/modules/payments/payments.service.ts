@@ -1,7 +1,28 @@
-import { EstadoPago, Prisma } from '@prisma/client';
+import { EstadoPago, EstadoReserva, Prisma } from '@prisma/client';
 
 import prisma from '../../database/prisma';
 import { type CreatePaymentInput } from './payments.validation';
+
+const courtSummarySelect = {
+  id: true,
+  codigo: true,
+  nombre: true,
+} satisfies Prisma.CanchaSelect;
+
+const reservationOverviewSelect = {
+  id: true,
+  codigo: true,
+  fechaInicio: true,
+  fechaFin: true,
+  duracionHoras: true,
+  estado: true,
+  montoTotal: true,
+  usuarioId: true,
+  canchaId: true,
+  court: {
+    select: courtSummarySelect,
+  },
+} satisfies Prisma.ReservaSelect;
 
 const reservationSummarySelect = {
   id: true,
@@ -15,7 +36,7 @@ const reservationSummarySelect = {
   canchaId: true,
 } satisfies Prisma.ReservaSelect;
 
-const paymentSelect = {
+const paymentRecordSelect = {
   id: true,
   monto: true,
   estado: true,
@@ -25,14 +46,36 @@ const paymentSelect = {
   reservaId: true,
   createdAt: true,
   updatedAt: true,
+} satisfies Prisma.PagoSelect;
+
+const paymentSelect = {
+  ...paymentRecordSelect,
   reservation: {
     select: reservationSummarySelect,
   },
 } satisfies Prisma.PagoSelect;
 
+const activeReservationsPaymentOverviewSelect = {
+  ...reservationOverviewSelect,
+  payment: {
+    select: paymentRecordSelect,
+  },
+} satisfies Prisma.ReservaSelect;
+
 export type Payment = Prisma.PagoGetPayload<{
   select: typeof paymentSelect;
 }>;
+
+export type PaymentRecord = Prisma.PagoGetPayload<{
+  select: typeof paymentRecordSelect;
+}>;
+
+export type PaymentOverview = {
+  reservation: Prisma.ReservaGetPayload<{
+    select: typeof reservationOverviewSelect;
+  }>;
+  payment: PaymentRecord | null;
+};
 
 const handlePrismaError = (error: unknown): Error => {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -63,12 +106,22 @@ const assertReservationAccess = (
 };
 
 export class PaymentsService {
-  async findAll(): Promise<Payment[]> {
+  async findAll(): Promise<PaymentOverview[]> {
     try {
-      return await prisma.pago.findMany({
-        select: paymentSelect,
-        orderBy: { createdAt: 'desc' },
+      const reservations = await prisma.reserva.findMany({
+        where: {
+          estado: {
+            in: [EstadoReserva.PENDIENTE, EstadoReserva.CONFIRMADA],
+          },
+        },
+        select: activeReservationsPaymentOverviewSelect,
+        orderBy: { fechaInicio: 'desc' },
       });
+
+      return reservations.map(({ payment, court, ...reservation }) => ({
+        reservation: { ...reservation, court },
+        payment,
+      }));
     } catch (error) {
       throw handlePrismaError(error);
     }
@@ -149,10 +202,9 @@ export class PaymentsService {
         data: {
           reservaId: data.reservaId,
           monto: reservation.montoTotal,
-          estado: EstadoPago.PAGADO,
+          estado: EstadoPago.PENDIENTE,
           metodoPago: data.metodoPago,
           referencia: data.referencia,
-          fechaPago: new Date(),
         },
         select: paymentSelect,
       });
@@ -177,7 +229,12 @@ export class PaymentsService {
 
       return await prisma.pago.update({
         where: { id },
-        data: { estado },
+        data: {
+          estado,
+          ...(estado === EstadoPago.PAGADO && existing.estado !== EstadoPago.PAGADO
+            ? { fechaPago: new Date() }
+            : {}),
+        },
         select: paymentSelect,
       });
     } catch (error) {

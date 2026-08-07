@@ -14,6 +14,13 @@ const router = Router();
 
 router.get('/', courtsController.getAll.bind(courtsController));
 
+router.get(
+  '/admin',
+  authenticate,
+  authorize(['ADMIN']),
+  courtsController.getAllAdmin.bind(courtsController),
+);
+
 router.get('/:id', courtsController.getById.bind(courtsController));
 
 router.post(

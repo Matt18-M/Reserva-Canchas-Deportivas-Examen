@@ -85,6 +85,20 @@ export class ReservationsController {
     }
   }
 
+  async getHistory(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const reservations = await reservationsService.findHistory();
+
+      res.status(200).json({
+        success: true,
+        message: 'Historial de reservas obtenido correctamente.',
+        data: reservations,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getByCourt(
     req: Request,
     res: Response,

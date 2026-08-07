@@ -140,7 +140,6 @@ model Reserva {
   court   Cancha  @relation(fields: [canchaId], references: [id], onDelete: Restrict)
   payment Pago?
 
-  @@unique([canchaId, fechaInicio, fechaFin])
   @@index([usuarioId])
   @@index([canchaId])
   @@index([fechaInicio, fechaFin])

@@ -46,6 +46,13 @@ router.get(
 );
 
 router.get(
+  '/history',
+  authenticate,
+  authorize(['ADMIN']),
+  reservationsController.getHistory.bind(reservationsController),
+);
+
+router.get(
   '/',
   authenticate,
   authorize(['ADMIN']),

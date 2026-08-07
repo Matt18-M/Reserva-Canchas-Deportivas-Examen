@@ -54,11 +54,39 @@ const assertCourtTypeExists = async (tipoCanchaId: number): Promise<void> => {
   }
 };
 
+const generateCourtCode = async (): Promise<string> => {
+  const totalCourts = await prisma.cancha.count();
+  const candidate = `CAN-${String(totalCourts + 1).padStart(3, '0')}`;
+
+  const existing = await prisma.cancha.findUnique({
+    where: { codigo: candidate },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return candidate;
+  }
+
+  const suffix = Date.now().toString(36).toUpperCase();
+  return `CAN-${suffix}`.slice(0, 20);
+};
+
 export class CourtsService {
   async findAllActive(): Promise<CourtWithType[]> {
     try {
       return await prisma.cancha.findMany({
         where: { activa: true },
+        select: courtWithTypeSelect,
+        orderBy: { id: 'asc' },
+      });
+    } catch (error) {
+      throw handlePrismaError(error);
+    }
+  }
+
+  async findAll(): Promise<CourtWithType[]> {
+    try {
+      return await prisma.cancha.findMany({
         select: courtWithTypeSelect,
         orderBy: { id: 'asc' },
       });
@@ -82,8 +110,13 @@ export class CourtsService {
     try {
       await assertCourtTypeExists(data.tipoCanchaId);
 
+      const codigo = data.codigo?.trim() || (await generateCourtCode());
+
       return await prisma.cancha.create({
-        data,
+        data: {
+          ...data,
+          codigo,
+        },
         select: courtWithTypeSelect,
       });
     } catch (error) {

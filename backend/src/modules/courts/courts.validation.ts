@@ -31,7 +31,7 @@ const tipoCanchaIdSchema = z.coerce
   .positive('El tipo de cancha debe ser un número positivo');
 
 export const createCourtSchema = z.object({
-  codigo: codigoSchema,
+  codigo: codigoSchema.optional(),
   nombre: nombreSchema,
   descripcion: descripcionSchema,
   precioHora: precioHoraSchema,

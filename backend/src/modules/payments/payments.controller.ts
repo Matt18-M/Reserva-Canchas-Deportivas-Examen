@@ -35,7 +35,7 @@ export class PaymentsController {
 
       res.status(200).json({
         success: true,
-        message: 'Pagos obtenidos correctamente.',
+        message: 'Panel de pagos obtenido correctamente.',
         data: payments,
       });
     } catch (error) {
@@ -60,13 +60,11 @@ export class PaymentsController {
         req.user.rol,
       );
 
-      if (!payment) {
-        throw new Error('Pago no encontrado.');
-      }
-
       res.status(200).json({
         success: true,
-        message: 'Pago obtenido correctamente.',
+        message: payment
+          ? 'Pago obtenido correctamente.'
+          : 'La reserva no tiene pago registrado.',
         data: payment,
       });
     } catch (error) {

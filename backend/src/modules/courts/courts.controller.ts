@@ -33,6 +33,20 @@ export class CourtsController {
     }
   }
 
+  async getAllAdmin(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const courts = await courtsService.findAll();
+
+      res.status(200).json({
+        success: true,
+        message: 'Canchas obtenidas correctamente.',
+        data: courts,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const courtId = parseCourtId(req.params.id);

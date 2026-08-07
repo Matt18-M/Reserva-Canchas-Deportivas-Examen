@@ -15,7 +15,7 @@ export const createPaymentSchema = z.object({
 });
 
 export const updatePaymentStatusSchema = z.object({
-  estado: z.enum(['PAGADO', 'FALLIDO', 'REEMBOLSADO'], {
+  estado: z.enum(['PENDIENTE', 'PAGADO', 'FALLIDO', 'REEMBOLSADO'], {
     error: 'Estado de pago inválido',
   }),
 });
