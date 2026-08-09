@@ -49,6 +49,25 @@ export class SchedulesController {
     }
   }
 
+  async getAllByCourtAdmin(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const courtId = parseCourtId(req.params.id);
+      const schedules = await schedulesService.findByCourtForAdmin(courtId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Horarios administrativos obtenidos correctamente.',
+        data: schedules,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const scheduleId = parseScheduleId(req.params.id);

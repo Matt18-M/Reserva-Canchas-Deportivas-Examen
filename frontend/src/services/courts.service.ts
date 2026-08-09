@@ -49,6 +49,11 @@ export const courtsService = {
     return data.data;
   },
 
+  getAllAdmin: async (): Promise<Court[]> => {
+    const { data } = await api.get<ApiResponse<Court[]>>('/courts/admin');
+    return data.data;
+  },
+
   getById: async (id: number): Promise<Court> => {
     const { data } = await api.get<ApiResponse<Court>>(`/courts/${id}`);
     return data.data;

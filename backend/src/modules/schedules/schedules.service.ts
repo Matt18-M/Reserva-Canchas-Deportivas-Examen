@@ -121,6 +121,32 @@ export class SchedulesService {
     }
   }
 
+  async findByCourtForAdmin(canchaId: number): Promise<Schedule[]> {
+    try {
+      const court = await prisma.cancha.findUnique({
+        where: { id: canchaId },
+      });
+
+      if (!court) {
+        throw new Error('Cancha no encontrada.');
+      }
+
+      const schedules = await prisma.horario.findMany({
+        where: { canchaId },
+        select: scheduleSelect,
+        orderBy: [{ diaSemana: 'asc' }, { horaInicio: 'asc' }],
+      });
+
+      return schedules.map(serializeSchedule);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw handlePrismaError(error);
+    }
+  }
+
   async findById(id: number): Promise<Schedule | null> {
     try {
       const schedule = await prisma.horario.findUnique({

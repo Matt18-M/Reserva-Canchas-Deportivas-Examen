@@ -9,7 +9,7 @@ const AdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-surface-muted">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50/45 via-surface-muted to-secondary-50/35">
       <Sidebar
         collapsed={collapsed}
         mobileOpen={mobileOpen}

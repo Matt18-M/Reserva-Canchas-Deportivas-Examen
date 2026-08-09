@@ -4,8 +4,11 @@ import { useMemo, useState } from 'react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import ScheduleFilters, {
+  EMPTY_SCHEDULE_FILTERS,
+  type ScheduleFiltersState,
+} from '@/pages/schedules/ScheduleFilters';
 import {
-  DIA_SEMANA_OPTIONS,
   formatScheduleTime,
   getDiaSemanaLabel,
 } from '@/pages/schedules/schedule.constants';
@@ -27,152 +30,129 @@ const ScheduleTable = ({
   onDelete,
   onToggleStatus,
 }: ScheduleTableProps) => {
-  const [courtFilter, setCourtFilter] = useState('');
-  const [dayFilter, setDayFilter] = useState('');
+  const [filters, setFilters] = useState<ScheduleFiltersState>(EMPTY_SCHEDULE_FILTERS);
 
   const filteredSchedules = useMemo(() => {
-    const courtId = courtFilter ? Number(courtFilter) : null;
-    const day = dayFilter || null;
+    const courtId = filters.courtId ? Number(filters.courtId) : null;
+    const day = filters.diaSemana || null;
+    const status =
+      filters.estado === 'true' ? true : filters.estado === 'false' ? false : null;
 
     return schedules.filter((schedule) => {
       const matchesCourt = courtId === null || schedule.canchaId === courtId;
       const matchesDay = day === null || schedule.diaSemana === day;
+      const matchesStatus = status === null || schedule.activo === status;
 
-      return matchesCourt && matchesDay;
+      return matchesCourt && matchesDay && matchesStatus;
     });
-  }, [schedules, courtFilter, dayFilter]);
+  }, [schedules, filters]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Listado de horarios</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <label htmlFor="court-filter" className="text-sm font-medium text-text">
-              Filtrar por cancha
-            </label>
-            <select
-              id="court-filter"
-              value={courtFilter}
-              onChange={(event) => setCourtFilter(event.target.value)}
-              className={cn(
-                'h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-text',
-                'focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/20 focus-visible:outline-none',
-              )}
-            >
-              <option value="">Todas las canchas</option>
-              {courts.map((court) => (
-                <option key={court.id} value={court.id}>
-                  {court.codigo} — {court.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+    <div className="space-y-4">
+      <ScheduleFilters filters={filters} courts={courts} onChange={setFilters} />
 
-          <div className="space-y-2">
-            <label htmlFor="day-filter" className="text-sm font-medium text-text">
-              Filtrar por día
-            </label>
-            <select
-              id="day-filter"
-              value={dayFilter}
-              onChange={(event) => setDayFilter(event.target.value)}
-              className={cn(
-                'h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-text',
-                'focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/20 focus-visible:outline-none',
-              )}
-            >
-              <option value="">Todos los días</option>
-              {DIA_SEMANA_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-text-muted">
-                <th className="px-3 py-3 font-medium">Cancha</th>
-                <th className="px-3 py-3 font-medium">Día</th>
-                <th className="px-3 py-3 font-medium">Hora inicio</th>
-                <th className="px-3 py-3 font-medium">Hora fin</th>
-                <th className="px-3 py-3 font-medium">Estado</th>
-                <th className="px-3 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSchedules.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-text-muted">
-                    No se encontraron horarios con los filtros aplicados.
-                  </td>
+      <Card className="overflow-hidden border-border/80 shadow-sm transition-shadow duration-300 hover:shadow-md">
+        <CardHeader className="border-b border-border/60 bg-gradient-to-r from-surface via-primary-50/30 to-secondary-50/30">
+          <CardTitle>Horarios ({filteredSchedules.length})</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-border bg-surface-muted/80 text-text-muted">
+                  <th className="px-4 py-3 font-medium">Cancha</th>
+                  <th className="px-4 py-3 font-medium">Día</th>
+                  <th className="px-4 py-3 font-medium">Hora inicio</th>
+                  <th className="px-4 py-3 font-medium">Hora fin</th>
+                  <th className="px-4 py-3 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium">Acciones</th>
                 </tr>
-              ) : (
-                filteredSchedules.map((schedule) => (
-                  <tr
-                    key={schedule.id}
-                    className="border-b border-border/70 last:border-b-0"
-                  >
-                    <td className="px-3 py-3 font-medium text-text">
-                      {schedule.court.codigo} — {schedule.court.nombre}
-                    </td>
-                    <td className="px-3 py-3 text-text-muted">
-                      {getDiaSemanaLabel(schedule.diaSemana)}
-                    </td>
-                    <td className="px-3 py-3 text-text">
-                      {formatScheduleTime(schedule.horaInicio)}
-                    </td>
-                    <td className="px-3 py-3 text-text">
-                      {formatScheduleTime(schedule.horaFin)}
-                    </td>
-                    <td className="px-3 py-3">
-                      <Badge variant={schedule.activo ? 'success' : 'danger'}>
-                        {schedule.activo ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          leftIcon={<Pencil className="size-4" />}
-                          onClick={() => onEdit(schedule)}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          leftIcon={<Power className="size-4" />}
-                          onClick={() => onToggleStatus(schedule)}
-                        >
-                          {schedule.activo ? 'Desactivar' : 'Activar'}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-danger hover:bg-red-50 hover:text-danger"
-                          leftIcon={<Trash2 className="size-4" />}
-                          onClick={() => onDelete(schedule)}
-                        >
-                          Eliminar
-                        </Button>
-                      </div>
+              </thead>
+              <tbody>
+                {filteredSchedules.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center text-text-muted">
+                      No se encontraron horarios con los filtros aplicados.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+                ) : (
+                  filteredSchedules.map((schedule, index) => (
+                    <tr
+                      key={schedule.id}
+                      className={cn(
+                        'border-b border-border/60 border-l-4 transition-all duration-200 last:border-b-0',
+                        schedule.activo
+                          ? 'border-l-emerald-500 hover:bg-emerald-50/60'
+                          : 'border-l-red-400 hover:bg-red-50/50',
+                        'animate-fade-in-up opacity-0',
+                      )}
+                      style={{ animationDelay: `${Math.min(index * 35, 350)}ms` }}
+                    >
+                      <td className="px-4 py-3.5 font-medium text-text">
+                        {schedule.court.codigo} — {schedule.court.nombre}
+                        {!schedule.court.activa ? (
+                          <span className="ml-2 text-xs text-text-muted">(Cancha inactiva)</span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3.5 text-text-muted">
+                        {getDiaSemanaLabel(schedule.diaSemana)}
+                      </td>
+                      <td className="px-4 py-3.5 font-medium text-primary-800">
+                        {formatScheduleTime(schedule.horaInicio)}
+                      </td>
+                      <td className="px-4 py-3.5 font-medium text-primary-800">
+                        {formatScheduleTime(schedule.horaFin)}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <Badge variant={schedule.activo ? 'success' : 'danger'}>
+                          {schedule.activo ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Pencil className="size-4" />}
+                            onClick={() => onEdit(schedule)}
+                            className="transition-transform duration-200 hover:scale-[1.02]"
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            leftIcon={<Power className="size-4" />}
+                            onClick={() => onToggleStatus(schedule)}
+                            className={cn(
+                              'transition-colors duration-200',
+                              schedule.activo
+                                ? 'hover:bg-amber-50 hover:text-amber-700'
+                                : 'hover:bg-emerald-50 hover:text-emerald-700',
+                            )}
+                          >
+                            {schedule.activo ? 'Desactivar' : 'Activar'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-danger transition-colors duration-200 hover:bg-red-50 hover:text-danger"
+                            leftIcon={<Trash2 className="size-4" />}
+                            onClick={() => onDelete(schedule)}
+                          >
+                            Eliminar
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

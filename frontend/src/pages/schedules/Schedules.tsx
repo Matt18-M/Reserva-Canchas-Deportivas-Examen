@@ -42,7 +42,7 @@ const Schedules = () => {
   const scheduleQueries = useQueries({
     queries: (courtsQuery.data ?? []).map((court) => ({
       queryKey: ['schedules', 'court', court.id],
-      queryFn: () => schedulesService.getByCourt(court.id),
+      queryFn: () => schedulesService.getByCourtAdmin(court.id),
       enabled: courtsQuery.isSuccess,
     })),
   });
@@ -228,10 +228,7 @@ const Schedules = () => {
           }
         : null;
 
-  const schedulesError =
-    courtsQuery.error ??
-    scheduleQueries.find((query) => query.error)?.error ??
-    null;
+  const schedulesError = courtsQuery.error ?? null;
 
   return (
     <div>

@@ -65,7 +65,11 @@ const Hero = ({ className }: HeroProps) => {
           <div className="absolute -bottom-8 -right-8 size-32 rounded-full bg-secondary-100 blur-2xl" />
 
           <div className="relative overflow-hidden rounded-3xl border border-border bg-surface shadow-lg">
-            <div className="aspect-[4/3] bg-[linear-gradient(135deg,#064e3b_0%,#10b981_45%,#6ee7b7_100%)]" />
+            <img
+              src="/images/complejo.jpg"
+              alt="Complejo deportivo con canchas de fútbol"
+              className="aspect-[4/3] w-full object-cover"
+            />
             <div className="space-y-4 p-6">
               <p className="text-sm font-medium uppercase tracking-wide text-primary-700">
                 Canchas premium

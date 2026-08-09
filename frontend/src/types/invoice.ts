@@ -1,0 +1,21 @@
+export type InvoiceData = {
+  invoiceNumber: string;
+  issueDate: string;
+  reservationCode: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string | null;
+  courtCode: string;
+  courtName: string;
+  courtType: string;
+  courtLocation: string | null;
+  startDate: string;
+  endDate: string;
+  durationHours: number;
+  unitPrice: string;
+  total: string;
+  paymentMethod: string | null;
+  paymentReference: string | null;
+  paymentStatus: string;
+  reservationStatus: string;
+};

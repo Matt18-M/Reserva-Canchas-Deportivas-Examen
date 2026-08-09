@@ -8,6 +8,7 @@ import { getApiErrorMessage } from '@/contexts/AuthContext';
 import ReservationDetail from '@/pages/admin-reservations/ReservationDetail';
 import ReservationFilters, {
   type AdminReservationFiltersState,
+  EMPTY_ADMIN_RESERVATION_FILTERS,
   getReservationStatusLabel,
 } from '@/pages/admin-reservations/ReservationFilters';
 import ReservationsTable from '@/pages/admin-reservations/ReservationsTable';
@@ -62,14 +63,9 @@ type StatusChangeAction = {
 
 const Reservations = () => {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState<AdminReservationFiltersState>({
-    estado: '',
-    usuarioId: '',
-    canchaId: '',
-    date: '',
-    codeSearch: '',
-    userSearch: '',
-  });
+  const [filters, setFilters] = useState<AdminReservationFiltersState>(
+    EMPTY_ADMIN_RESERVATION_FILTERS,
+  );
   const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
   const [statusChangeAction, setStatusChangeAction] = useState<StatusChangeAction | null>(null);
 
@@ -118,21 +114,7 @@ const Reservations = () => {
     },
   });
 
-  const filteredReservations = useMemo(() => {
-    const normalizedCode = filters.codeSearch.trim().toLowerCase();
-    const normalizedUser = filters.userSearch.trim().toLowerCase();
-
-    return (reservationsQuery.data ?? []).filter((reservation) => {
-      const fullName = `${reservation.user.nombre} ${reservation.user.apellido}`.toLowerCase();
-      const matchesCode =
-        normalizedCode.length === 0 ||
-        reservation.codigo.toLowerCase().includes(normalizedCode);
-      const matchesUser =
-        normalizedUser.length === 0 || fullName.includes(normalizedUser);
-
-      return matchesCode && matchesUser;
-    });
-  }, [reservationsQuery.data, filters.codeSearch, filters.userSearch]);
+  const filteredReservations = reservationsQuery.data ?? [];
 
   const handleViewDetail = (reservation: AdminReservation) => {
     setSelectedReservationId(reservation.id);

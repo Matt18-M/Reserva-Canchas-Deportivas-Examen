@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   CreditCard,
+  FileText,
   History,
   LayoutDashboard,
   Layers3,
@@ -18,9 +19,10 @@ const adminNavItems = [
   { to: '/admin/court-types', label: 'Tipos de cancha', icon: Layers3 },
   { to: '/admin/courts', label: 'Canchas', icon: MapPin },
   { to: '/admin/schedules', label: 'Horarios', icon: Clock3 },
-  { to: '/admin/reservations', label: 'Reservas', icon: CalendarDays },
+  { to: '/admin/reservations', label: 'Reservas', icon: CalendarDays, end: true },
   { to: '/admin/reservations/history', label: 'Historial', icon: History },
   { to: '/admin/payments', label: 'Pagos', icon: CreditCard },
+  { to: '/admin/invoices', label: 'Facturas', icon: FileText },
   { to: '/admin/users', label: 'Usuarios', icon: Users },
 ] as const;
 
@@ -44,7 +46,7 @@ const Sidebar = ({ collapsed, mobileOpen, onCloseMobile }: SidebarProps) => {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface',
+          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-primary-100/80 bg-surface/95 backdrop-blur-sm',
           'transition-all duration-300 ease-in-out',
           collapsed ? 'w-[72px]' : 'w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',

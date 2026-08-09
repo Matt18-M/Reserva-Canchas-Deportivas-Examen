@@ -15,6 +15,13 @@ const router = Router();
 export const courtSchedulesRouter = Router();
 
 courtSchedulesRouter.get(
+  '/:id/schedules/admin',
+  authenticate,
+  authorize(['ADMIN']),
+  schedulesController.getAllByCourtAdmin.bind(schedulesController),
+);
+
+courtSchedulesRouter.get(
   '/:id/schedules',
   schedulesController.getByCourt.bind(schedulesController),
 );

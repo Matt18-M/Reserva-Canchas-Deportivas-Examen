@@ -10,6 +10,7 @@ type CourtTypeItem = {
   name: string;
   description: string;
   tag: string;
+  image: string;
 };
 
 const COURT_TYPES: CourtTypeItem[] = [
@@ -18,18 +19,21 @@ const COURT_TYPES: CourtTypeItem[] = [
     name: 'Fútbol',
     description: 'Canchas sintéticas y de césped con medidas reglamentarias para partidos y entrenamientos.',
     tag: 'Más popular',
+    image: '/images/cancha.jpg',
   },
   {
     icon: CircleDot,
     name: 'Tenis',
     description: 'Superficies duras y arcilla para singles, doubles y clínicas deportivas.',
     tag: 'Alta demanda',
+    image: '/images/tenis.jpg',
   },
   {
     icon: Volleyball,
     name: 'Vóley / Pádel',
     description: 'Espacios indoor y outdoor con iluminación para juego nocturno.',
     tag: 'Grupos',
+    image: '/images/indor.jpg',
   },
 ];
 
@@ -59,7 +63,11 @@ const CourtTypesSection = ({ className }: CourtTypesSectionProps) => {
 
             return (
               <Card key={courtType.name} className="overflow-hidden">
-                <div className="h-40 bg-[linear-gradient(135deg,#0f766e_0%,#14b8a6_55%,#99f6e4_100%)]" />
+                <img
+                  src={courtType.image}
+                  alt={courtType.name}
+                  className="h-40 w-full object-cover"
+                />
                 <CardHeader className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex size-11 items-center justify-center rounded-xl bg-primary-50 text-primary-700">

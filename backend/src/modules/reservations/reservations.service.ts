@@ -423,7 +423,6 @@ export class ReservationsService {
   async findHistory(): Promise<Reservation[]> {
     try {
       return await prisma.reserva.findMany({
-        where: { estado: EstadoReserva.COMPLETADA },
         select: reservationSelect,
         orderBy: { fechaInicio: 'desc' },
       });

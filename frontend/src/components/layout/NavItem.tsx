@@ -31,8 +31,8 @@ const NavItem = ({
           'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
           collapsed && 'justify-center px-2',
           isActive
-            ? 'bg-surface-muted text-text shadow-sm ring-1 ring-border'
-            : 'text-text-muted hover:bg-surface-muted hover:text-text',
+            ? 'bg-primary-50 text-primary-800 shadow-sm ring-1 ring-primary-200/80'
+            : 'text-text-muted hover:bg-primary-50/60 hover:text-primary-800',
         )
       }
     >

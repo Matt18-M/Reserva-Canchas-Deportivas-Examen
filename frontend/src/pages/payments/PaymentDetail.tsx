@@ -1,3 +1,7 @@
+import { Printer } from 'lucide-react';
+import { useState } from 'react';
+
+import InvoicePreviewModal from '@/components/invoice/InvoicePreviewModal';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import {
@@ -24,6 +28,7 @@ import {
   type PaymentOverview,
   type PaymentStatus,
 } from '@/services/payments.service';
+import { buildInvoiceFromPaymentOverview } from '@/utils/invoice.utils';
 
 type PaymentDetailProps = {
   item: PaymentOverview;
@@ -70,13 +75,18 @@ const PaymentDetail = ({
   onClose,
   onStatusChange,
 }: PaymentDetailProps) => {
+  const [invoiceData, setInvoiceData] = useState(
+    () => null as ReturnType<typeof buildInvoiceFromPaymentOverview> | null,
+  );
+
   const displayStatus = getPaymentDisplayStatus(item);
   const payment = item.payment;
   const observation = getPaymentProcessObservation(displayStatus);
   const adminActions = payment ? getPaymentAdminActions(displayStatus) : [];
 
   return (
-    <Card className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-lg">
+    <>
+      <Card className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-lg">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -155,12 +165,23 @@ const PaymentDetail = ({
         )}
       </CardContent>
 
-      <CardFooter className="justify-end">
+      <CardFooter className="justify-between gap-3">
+        <Button
+          variant="secondary"
+          leftIcon={<Printer className="size-4" />}
+          onClick={() => setInvoiceData(buildInvoiceFromPaymentOverview(item, user))}
+          disabled={isUpdating}
+        >
+          Imprimir factura
+        </Button>
         <Button variant="outline" onClick={onClose} disabled={isUpdating}>
           Cerrar
         </Button>
       </CardFooter>
-    </Card>
+      </Card>
+
+      <InvoicePreviewModal data={invoiceData} onClose={() => setInvoiceData(null)} />
+    </>
   );
 };
 

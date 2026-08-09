@@ -12,6 +12,7 @@ import Schedules from '@/pages/schedules/Schedules';
 import AdminReservations from '@/pages/admin-reservations/Reservations';
 import ReservationsHistory from '@/pages/admin-reservations/ReservationsHistory';
 import Payments from '@/pages/payments/Payments';
+import Invoices from '@/pages/invoices/Invoices';
 import Landing from '@/pages/landing/Landing';
 import ReservationWizard from '@/pages/reservations/ReservationWizard';
 import MyReservations from '@/pages/reservations/MyReservations';
@@ -79,6 +80,10 @@ export const router = createBrowserRouter([
           {
             path: 'payments',
             element: <Payments />,
+          },
+          {
+            path: 'invoices',
+            element: <Invoices />,
           },
           {
             path: '*',

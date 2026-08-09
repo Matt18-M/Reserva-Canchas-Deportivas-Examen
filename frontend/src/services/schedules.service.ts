@@ -57,6 +57,11 @@ export const schedulesService = {
     return data.data;
   },
 
+  getByCourtAdmin: async (courtId: number): Promise<Schedule[]> => {
+    const { data } = await api.get<ApiResponse<Schedule[]>>(`/courts/${courtId}/schedules/admin`);
+    return data.data;
+  },
+
   getById: async (id: number): Promise<Schedule> => {
     const { data } = await api.get<ApiResponse<Schedule>>(`/schedules/${id}`);
     return data.data;

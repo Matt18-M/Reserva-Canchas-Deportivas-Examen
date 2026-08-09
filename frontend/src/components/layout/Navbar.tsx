@@ -16,7 +16,7 @@ const Navbar = ({
   onOpenMobile,
 }: NavbarProps) => {
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-primary-100/70 bg-surface/85 backdrop-blur-md">
       <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Button

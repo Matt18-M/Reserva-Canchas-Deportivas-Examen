@@ -1,3 +1,7 @@
+import { Printer } from 'lucide-react';
+import { useState } from 'react';
+
+import InvoicePreviewModal from '@/components/invoice/InvoicePreviewModal';
 import Button from '@/components/ui/Button';
 import {
   Card,
@@ -19,6 +23,7 @@ import {
 } from '@/pages/admin-reservations/ReservationFilters';
 import type { AdminReservation, ReservationStatus } from '@/services/admin-reservations.service';
 import type { PaymentMethod } from '@/services/payments.service';
+import { buildInvoiceFromReservation } from '@/utils/invoice.utils';
 
 type ReservationDetailProps = {
   reservation: AdminReservation | null;
@@ -104,6 +109,10 @@ const ReservationDetail = ({
   onClose,
   onStatusChange,
 }: ReservationDetailProps) => {
+  const [invoiceData, setInvoiceData] = useState(
+    () => null as ReturnType<typeof buildInvoiceFromReservation> | null,
+  );
+
   if (isLoading) {
     return (
       <Card className="relative z-10 w-full max-w-2xl shadow-lg">
@@ -124,7 +133,8 @@ const ReservationDetail = ({
     status === 'CONFIRMADA' || status === 'COMPLETADA';
 
   return (
-    <Card className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-lg">
+    <>
+      <Card className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-lg">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -225,12 +235,23 @@ const ReservationDetail = ({
         ) : null}
       </CardContent>
 
-      <CardFooter className="justify-end">
+      <CardFooter className="justify-between gap-3">
+        <Button
+          variant="secondary"
+          leftIcon={<Printer className="size-4" />}
+          onClick={() => setInvoiceData(buildInvoiceFromReservation(reservation))}
+          disabled={isUpdating}
+        >
+          Imprimir factura
+        </Button>
         <Button variant="outline" onClick={onClose} disabled={isUpdating}>
           Cerrar
         </Button>
       </CardFooter>
-    </Card>
+      </Card>
+
+      <InvoicePreviewModal data={invoiceData} onClose={() => setInvoiceData(null)} />
+    </>
   );
 };
 

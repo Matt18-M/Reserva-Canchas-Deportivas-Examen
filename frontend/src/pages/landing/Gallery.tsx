@@ -3,39 +3,39 @@ import { cn } from '@/utils/cn';
 type GalleryItem = {
   title: string;
   subtitle: string;
-  gradient: string;
+  src: string;
 };
 
 const GALLERY_ITEMS: GalleryItem[] = [
   {
     title: 'Cancha principal',
     subtitle: 'Fútbol 11 · Iluminación LED',
-    gradient: 'from-emerald-700 via-emerald-500 to-teal-300',
+    src: '/images/cancha.jpg',
   },
   {
     title: 'Zona de tenis',
     subtitle: 'Superficie dura · Vestuarios',
-    gradient: 'from-teal-800 via-cyan-600 to-emerald-300',
+    src: '/images/tenis.jpg',
   },
   {
     title: 'Área indoor',
     subtitle: 'Pádel y vóley · Climatizado',
-    gradient: 'from-slate-800 via-emerald-700 to-lime-300',
+    src: '/images/indor.jpg',
   },
   {
     title: 'Complejo nocturno',
     subtitle: 'Reservas hasta las 22:00',
-    gradient: 'from-emerald-900 via-green-700 to-emerald-400',
+    src: '/images/nocturno.jpg',
   },
   {
     title: 'Zona de entrenamiento',
     subtitle: 'Grupos y academias',
-    gradient: 'from-teal-900 via-emerald-600 to-cyan-300',
+    src: '/images/cancha2.jpg',
   },
   {
     title: 'Espacio premium',
     subtitle: 'Césped sintético profesional',
-    gradient: 'from-green-900 via-emerald-700 to-green-400',
+    src: '/images/premium.jpg',
   },
 ];
 
@@ -69,10 +69,11 @@ const Gallery = ({ className }: GalleryProps) => {
                 index === 0 && 'sm:col-span-2 lg:col-span-2 lg:row-span-1',
               )}
             >
-              <div
+              <img
+                src={item.src}
+                alt={item.title}
                 className={cn(
-                  'aspect-[16/10] bg-gradient-to-br transition-transform duration-300 group-hover:scale-[1.02]',
-                  item.gradient,
+                  'aspect-[16/10] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]',
                   index === 0 && 'sm:aspect-[21/9]',
                 )}
               />

@@ -91,7 +91,7 @@ export class ReservationsController {
 
       res.status(200).json({
         success: true,
-        message: 'Historial de reservas obtenido correctamente.',
+        message: 'Historial completo de reservas obtenido correctamente.',
         data: reservations,
       });
     } catch (error) {

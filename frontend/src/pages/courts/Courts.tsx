@@ -39,8 +39,8 @@ const Courts = () => {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
 
   const courtsQuery = useQuery({
-    queryKey: ['courts'],
-    queryFn: courtsService.getAll,
+    queryKey: ['courts', 'admin'],
+    queryFn: courtsService.getAllAdmin,
   });
 
   const courtTypesQuery = useQuery({
@@ -50,6 +50,7 @@ const Courts = () => {
 
   const invalidateCourts = async () => {
     await queryClient.invalidateQueries({ queryKey: ['courts'] });
+    await queryClient.invalidateQueries({ queryKey: ['courts', 'admin'] });
     await queryClient.invalidateQueries({ queryKey: ['dashboard', 'courts'] });
   };
 

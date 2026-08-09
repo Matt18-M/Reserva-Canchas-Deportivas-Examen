@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Plus, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import Loading from '@/components/ui/Loading';
-import PageHeader from '@/components/ui/PageHeader';
 import { getApiErrorMessage } from '@/contexts/AuthContext';
 import CourtTypeForm from '@/pages/court-types/CourtTypeForm';
 import CourtTypeTable from '@/pages/court-types/CourtTypeTable';
@@ -107,16 +106,33 @@ const CourtTypes = () => {
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div>
-      <PageHeader
-        title="Tipos de cancha"
-        description="Administra las categorías disponibles para clasificar las canchas."
-        actions={
-          <Button leftIcon={<Plus className="size-4" />} onClick={openCreateForm}>
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-700 via-primary-600 to-secondary-600 p-6 text-white shadow-lg sm:p-8">
+        <div className="dashboard-shimmer pointer-events-none absolute inset-0" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-sm">
+              <Sparkles className="size-3.5" />
+              Catálogo deportivo
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Tipos de cancha</h1>
+              <p className="mt-2 max-w-2xl text-sm text-white/85 sm:text-base">
+                Administra las categorías disponibles para clasificar las canchas.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="lg"
+            leftIcon={<Plus className="size-4" />}
+            onClick={openCreateForm}
+            className="shrink-0 !border-white !bg-white !text-primary-800 shadow-md hover:!bg-primary-50"
+          >
             Nuevo tipo
           </Button>
-        }
-      />
+        </div>
+      </section>
 
       {courtTypesQuery.isLoading ? (
         <Loading fullScreen label="Cargando tipos de cancha..." />
